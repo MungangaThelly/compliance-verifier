@@ -7,60 +7,75 @@ import puppeteer from "puppeteer";
 const app = express();
 app.use(express.json());
 
-// ✅ Fix CORS here
+// ✅ Enable CORS for frontend (adjust origin as needed)
 app.use(cors({
-  origin: "http://localhost:5173", // allow your dev frontend
-  credentials: true,              // only needed if you're using cookies/auth headers
+  origin: "http://localhost:5173",
+  credentials: true,
 }));
 
-// Apply Helmet for security headers
-app.use(helmet());
+// ✅ Middleware to generate nonce per request
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString("base64");
+  next();
+});
 
-// Generate CSP with nonce
-// Lägg till denna endpoint i din Express-server
+// ✅ Helmet with dynamic CSP using nonce
+app.use(helmet.contentSecurityPolicy({
+  useDefaults: true,
+  directives: {
+    "script-src": [
+      "'self'",
+      (req, res) => `'nonce-${res.locals.nonce}'`,
+      "'strict-dynamic'",
+    ],
+    "object-src": ["'none'"],
+  },
+}));
+
+// ✅ Endpoint to get nonce & CSP string
 app.get('/api/csp/generate', (req, res) => {
   try {
-    const nonce = crypto.randomBytes(16).toString('base64');
-    res.json({ 
-      nonce,
-      csp: `script-src 'nonce-${nonce}' 'strict-dynamic'; object-src 'none';`
-    });
+    const nonce = res.locals.nonce;
+    const csp = `script-src 'nonce-${nonce}' 'strict-dynamic'; object-src 'none';`;
+    res.json({ nonce, csp });
   } catch (error) {
     console.error('Nonce generation error:', error);
     res.status(500).json({ error: 'Failed to generate nonce' });
   }
 });
 
+// ✅ CSP scan route with optimized Puppeteer usage
 app.post('/api/csp/scan', async (req, res) => {
   const { url } = req.body;
 
   if (!url || typeof url !== 'string' || !url.startsWith('http')) {
-    return res.status(400).json({ error: 'ogiltig eller saknad URL' })};
-  
+    return res.status(400).json({ error: 'Ogiltig eller saknad URL' });
+  }
+
   try {
     const browser = await puppeteer.launch({ headless: true, timeout: 10000 });
     const page = await browser.newPage();
-    
-    // Navigate to the page and wait for network idle
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-    
-    // Extract CSP from meta tag or headers
-    const cspHeader = await page.evaluate(() => {
-      const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-      return metaCSP ? metaCSP.content : null;
+
+    // Navigate once and capture response
+    const response = await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    // Extract CSP from meta tag
+    const cspMeta = await page.evaluate(() => {
+      const meta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+      return meta ? meta.content : null;
     });
 
-    // If no CSP in meta, check response headers
-    const response = await page.goto(url);
-    const cspFromHeaders = response.headers()['content-security-policy'];
+    // Try to get CSP from headers if not in meta
+    const cspHeader = response.headers()['content-security-policy'];
 
     await browser.close();
 
     res.json({
       url,
-      cspHeader: cspHeader || cspFromHeaders || 'Ingen CSP hittades',
+      cspHeader: cspMeta || cspHeader || 'Ingen CSP hittades',
       timestamp: new Date().toISOString(),
     });
+
   } catch (error) {
     console.error('Error scanning page:', error);
     res.status(500).json({
@@ -71,5 +86,5 @@ app.post('/api/csp/scan', async (req, res) => {
 
 const port = 3001;
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`✅ Server running on http://localhost:${port}`);
 });
