@@ -19,17 +19,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Helmet with dynamic CSP using nonce
-app.use(helmet.contentSecurityPolicy({
-  useDefaults: true,
-  directives: {
-    "script-src": [
-      "'self'",
-      (req, res) => `'nonce-${res.locals.nonce}'`,
-      "'strict-dynamic'",
-    ],
-    "object-src": ["'none'"],
-  },
+// ✅ Helmet with CSP disabled for development (backend only affects API responses)
+app.use(helmet({
+  contentSecurityPolicy: false,
 }));
 
 // ✅ Endpoint to get nonce & CSP string
