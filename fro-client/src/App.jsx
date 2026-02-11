@@ -8,7 +8,7 @@ import { SCAN_URL } from './api';
 import './App.css';
 
 // ✅ Environment variables (from Vite)
-const API_URL = import.meta.env.VITE_SPRINTO_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 const IS_DEV = import.meta.env.VITE_APP_ENV === "development";
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === "true";
 
@@ -16,8 +16,8 @@ function App() {
   const [scanResults, setScanResults] = useState(null);
   const nonce = useNonce(); // Hämtar nonce från backend
 
-  // Mock-funktion för att simulera API-anrop till Sprinto
-  const sendToSprintoAPI = async (data) => {
+  // Mock-funktion för att simulera API-anrop till IT-Weor AB
+  const sendToITWeorABAPI = async (data) => {
     try {
       const response = await fetch('http://localhost:3001/api/csp/scan', {
         method: 'POST',
@@ -41,9 +41,9 @@ function App() {
   const handleScanComplete = (results) => {
     setScanResults(results);
     
-    // Skicka automatiskt till Sprinto (alternativt manuell knapp)
-    sendToSprintoAPI(results).then(res => {
-      console.log('Sprinto API Response:', res);
+    // Skicka automatiskt till IT-Weor AB (alternativt manuell knapp)
+    sendToITWeorABAPI(results).then(res => {
+      console.log('IT-Weor AB API Response:', res);
     });
   };
 
@@ -58,7 +58,7 @@ function App() {
       )}
 
       <header>
-        <h1>Sprinto Compliance Verifierare</h1>
+        <h1>IT-Weor AB Compliance Verifierare</h1>
       </header>
 
       <main>
