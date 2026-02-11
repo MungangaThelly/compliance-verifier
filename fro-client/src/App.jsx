@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import CSPScanner from './components/CSPScanner';
 import ScanHistory from './components/ScanHistory';
 import Settings from './components/Settings';
+import ReportGenerator from './components/ReportGenerator';
 import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -128,7 +129,16 @@ function App() {
             {/* Page Content */}
             <div className="animate-fade-in">
               {activePage === 'dashboard' && <Dashboard scanResults={scanResults} scanHistory={scanHistory} />}
-              {activePage === 'scanner' && <CSPScanner onScanComplete={handleScanComplete} nonce={nonce} />}
+              {activePage === 'scanner' && (
+                <>
+                  <CSPScanner onScanComplete={handleScanComplete} nonce={nonce} />
+                  {scanResults && (
+                    <div className="mt-6">
+                      <ReportGenerator data={scanResults} />
+                    </div>
+                  )}
+                </>
+              )}
               {activePage === 'history' && <ScanHistory scanHistory={scanHistory} onSelectScan={setScanResults} />}
               {activePage === 'settings' && <Settings />}
             </div>
