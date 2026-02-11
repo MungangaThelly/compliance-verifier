@@ -38,6 +38,15 @@ app.use(helmet({
   contentSecurityPolicy: false,
 }));
 
+// ✅ Friendly root route
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "API is running",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ✅ Endpoint to get nonce & CSP string
 app.get('/api/csp/generate', (req, res) => {
   try {
