@@ -1,25 +1,65 @@
 # Deploying to Vercel
 
-This guide covers deploying both the frontend and backend to Vercel.
+This guide covers deploying both the frontend and backend to Vercel as separate projects.
+
+## Project Structure
+
+```
+compliance-verifier/
+├── backend/                  ← Express.js API server
+│   ├── server.js
+│   ├── package.json
+│   ├── vercel.json
+│   └── .gitignore
+├── fro-client/              ← React + Vite frontend
+│   ├── src/
+│   ├── dist/
+│   ├── package.json
+│   ├── vercel.json
+│   └── index.html
+├── .git/
+├── .gitignore
+└── DEPLOYMENT.md
+```
 
 ## Prerequisites
 
 - Vercel account ([vercel.com](https://vercel.com))
-- Vercel CLI installed: `npm i -g vercel`
+- GitHub repository connected to Vercel
+- Two separate Vercel projects (one for frontend, one for backend)
+
+## Pre-Deployment Cleanup
+
+After reorganizing the codebase, remove these duplicate files from the root directory:
+
+```bash
+git rm server.js
+git rm vercel.json
+git rm package.json
+git rm package-lock.json
+git commit -m "Clean up: remove root-level deployment files (moved to backend/)"
+git push
+```
+
+**Why?** The root-level files are now duplicated in `backend/`. Vercel will properly find them in their respective folders:
+- Backend will use `backend/server.js` and `backend/vercel.json`
+- Frontend will use `fro-client/` configuration
+
+For details, see [CLEANUP_CHECKLIST.md](CLEANUP_CHECKLIST.md).
 
 ## Option 1: Deploy via Vercel Dashboard (Recommended)
 
 ### Backend Deployment
 
 1. Go to [vercel.com/new](https://vercel.com/new)
-2. Import the repository root (`compliance-verifier`)
+2. Import the repository (you can use the same repo for both projects)
 3. Configure as follows:
    - **Framework Preset**: Other
-   - **Root Directory**: `./` (project root)
+   - **Root Directory**: `backend`
    - **Build Command**: Leave empty (serverless function)
    - **Output Directory**: Leave empty
-4. Add environment variable (you can add this later after frontend is deployed):
-   - `FRONTEND_URL` = `https://your-frontend.vercel.app` (add after frontend deployment)
+4. Add environment variable (after frontend is deployed):
+   - `FRONTEND_URL` = `https://<your-frontend>.vercel.app`
 5. Deploy and note the URL (e.g., `https://your-backend.vercel.app`)
 
 ### Frontend Deployment
@@ -40,21 +80,29 @@ This guide covers deploying both the frontend and backend to Vercel.
 ### Backend
 
 ```bash
-cd compliance-verifier
+cd backend
 vercel --prod
 ```
 
 ### Frontend
 
 ```bash
-cd compliance-verifier/fro-client
+cd fro-client
 vercel --prod
 ```
 
-When prompted, set the environment variable:
+When prompted, set the environment variables:
+
+**Frontend env var:**
 ```bash
 vercel env add VITE_API_BASE_URL production
 # Enter: https://your-backend.vercel.app
+```
+
+**Backend env var (after frontend deployed):**
+```bash
+vercel env add FRONTEND_URL production
+# Enter: https://your-frontend.vercel.app
 ```
 
 ## Post-Deployment Configuration

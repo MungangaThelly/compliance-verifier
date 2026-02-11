@@ -7,9 +7,9 @@
     "nodemon": "^3.1.10",
     "puppeteer": "^24.8.0"
   },
-  "name": "compliance-verifier",
+  "name": "compliance-verifier-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "CSP Compliance Verification API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

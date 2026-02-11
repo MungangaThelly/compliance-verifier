@@ -63,43 +63,73 @@ app.get('/api/csp/generate', (req, res) => {
 app.post('/api/csp/scan', async (req, res) => {
   const { url } = req.body;
 
-  if (!url || typeof url !== 'string' || !url.startsWith('http')) {
-    return res.status(400).json({ error: 'Ogiltig eller saknad URL' });
+  if (!url) {
+    return res.status(400).json({
+      error: 'URL is required',
+    });
   }
 
   try {
-    const browser = await puppeteer.launch({ headless: true, timeout: 10000 });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox'
+      ]
+    });
+
     const page = await browser.newPage();
 
-    // Navigate once and capture response
-    const response = await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-
-    // Extract CSP from meta tag
-    const cspMeta = await page.evaluate(() => {
-      const meta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-      return meta ? meta.content : null;
+    // Capture CSP header
+    let cspHeader = 'Ingen CSP hittades';
+    page.on('response', (response) => {
+      const contentSecurityPolicy = response.headers()['content-security-policy'];
+      if (contentSecurityPolicy) {
+        cspHeader = contentSecurityPolicy;
+      }
     });
 
-    // Try to get CSP from headers if not in meta
-    const cspHeader = response.headers()['content-security-policy'];
+    try {
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-    await browser.close();
+      // Calculate risk score
+      let riskScore = 100;
 
-    res.json({
-      url,
-      cspHeader: cspMeta || cspHeader || 'Ingen CSP hittades',
-      timestamp: new Date().toISOString(),
-    });
+      if (!cspHeader || cspHeader === 'Ingen CSP hittades') {
+        riskScore -= 50;
+      } else {
+        const headerLower = cspHeader.toLowerCase();
 
+        if (headerLower.includes('unsafe-inline')) riskScore -= 30;
+        if (headerLower.includes('unsafe-eval')) riskScore -= 20;
+        if (headerLower.includes('*')) riskScore -= 25;
+        if (!headerLower.includes('default-src')) riskScore -= 15;
+        if (!headerLower.includes('script-src')) riskScore -= 20;
+        if (!headerLower.includes('object-src')) riskScore -= 10;
+      }
+
+      riskScore = Math.max(0, Math.min(100, riskScore));
+
+      res.json({
+        url,
+        cspHeader,
+        riskScore,
+        timestamp: new Date().toISOString(),
+      });
+    } finally {
+      await browser.close();
+    }
   } catch (error) {
-    console.error('Error scanning page:', error);
+    console.error('Scan error:', error);
     res.status(500).json({
-      error: `Kunde inte skanna ${url}: ${error.message}`,
+      error: 'Failed to scan website',
+      details: error.message,
     });
   }
 });
 
-const port = 3001;
+// ✅ Start server
+const port = process.env.PORT || 3001;
 app.listen(port, () => {
-  console.log(`✅ Server running on http://localhost:${port}`);
+  console.log(`✅ API running on port ${port}`);
 });
