@@ -74,6 +74,48 @@ export function ReportGenerator({ data }) {
   const risk = getRiskLevel();
   const recommendations = getRecommendations();
 
+  const generateTextReport = () => {
+    const textLines = [];
+    textLines.push('═══════════════════════════════════════════════════');
+    textLines.push('      IT-WEOR AB COMPLIANCE VERIFICATION REPORT');
+    textLines.push('═══════════════════════════════════════════════════');
+    textLines.push('');
+    textLines.push(`Generated: ${new Date().toLocaleString()}`);
+    textLines.push(`URL: ${data.url}`);
+    textLines.push(`Risk Level: ${risk.level} (Score: ${data.riskScore || 0}/100)`);
+    textLines.push('');
+    textLines.push('───────────────────────────────────────────────────');
+    textLines.push('CONTENT SECURITY POLICY ANALYSIS');
+    textLines.push('───────────────────────────────────────────────────');
+    textLines.push('');
+    if (data.cspHeader && data.cspHeader !== 'Ingen CSP hittades') {
+      textLines.push('CSP Header Found:');
+      textLines.push(data.cspHeader);
+    } else {
+      textLines.push('⚠ NO CSP HEADER DETECTED');
+      textLines.push('This website does not have Content-Security-Policy protection.');
+    }
+    textLines.push('');
+    textLines.push('───────────────────────────────────────────────────');
+    textLines.push('RECOMMENDATIONS & ACTION ITEMS');
+    textLines.push('───────────────────────────────────────────────────');
+    textLines.push('');
+    recommendations.forEach((rec, i) => {
+      textLines.push(`${i + 1}. ${rec.title}`);
+      textLines.push(`   Severity: ${rec.severity}`);
+      if (rec.why) {
+        textLines.push(`   Why: ${rec.why}`);
+      }
+      textLines.push(`   Action: ${rec.action}`);
+      textLines.push('');
+    });
+    textLines.push('───────────────────────────────────────────────────');
+    textLines.push('END OF REPORT');
+    textLines.push('═══════════════════════════════════════════════════');
+    
+    return textLines.join('\n');
+  };
+
   return (
     <div className="space-y-4">
       {/* Report Summary Card */}
@@ -137,12 +179,29 @@ export function ReportGenerator({ data }) {
 
       {/* Action Buttons */}
       <div className="flex gap-3 flex-wrap">
+        <button
+          onClick={() => {
+            const text = generateTextReport();
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `compliance-report-${new Date().toISOString().slice(0, 10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="btn btn-primary"
+        >
+          <Download size={20} />
+          Download TXT Report
+        </button>
+
         <PDFDownloadLink
           document={<ComplianceReport data={data} />}
           fileName={`compliance-report-${new Date().toISOString().slice(0, 10)}.pdf`}
         >
           {({ loading }) => (
-            <button className="btn btn-primary" disabled={loading}>
+            <button className="btn btn-secondary" disabled={loading}>
               <Download size={20} />
               {loading ? 'Generating...' : 'Download PDF'}
             </button>
@@ -163,6 +222,7 @@ export function ReportGenerator({ data }) {
             a.href = url;
             a.download = `scan-${new Date().toISOString().slice(0, 10)}.json`;
             a.click();
+            URL.revokeObjectURL(url);
           }}
           className="btn btn-secondary"
         >
