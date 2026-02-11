@@ -214,12 +214,14 @@ function getRecommendations(analysis) {
     recommendations.push({
       priority: 1,
       title: 'Implement Content-Security-Policy',
+      why: 'Without CSP, your website is vulnerable to XSS attacks, code injection, and clickjacking. Attackers can inject malicious scripts that steal user data, hijack sessions, or deface your website.',
       action: 'Add CSP header to all responses with strict directives.',
       example: "Content-Security-Policy: default-src 'self'; script-src 'self'",
     });
     recommendations.push({
       priority: 2,
       title: 'Use Report-Only Mode First',
+      why: 'Testing in report-only mode prevents breaking your website functionality while you identify and fix CSP violations. This reduces downtime and user impact during implementation.',
       action: 'Start with Content-Security-Policy-Report-Only to monitor violations.',
       example: 'Content-Security-Policy-Report-Only: ...',
     });
@@ -229,6 +231,7 @@ function getRecommendations(analysis) {
     recommendations.push({
       priority: 1,
       title: 'Remove unsafe-inline',
+      why: "Using 'unsafe-inline' defeats the primary purpose of CSP by allowing inline scripts and styles. This is the most common XSS attack vector, enabling attackers to inject malicious code directly into your pages.",
       action: 'Use nonce or hash-based script execution instead.',
       example: "script-src 'nonce-random123'",
     });
@@ -238,6 +241,7 @@ function getRecommendations(analysis) {
     recommendations.push({
       priority: 1,
       title: 'Remove unsafe-eval',
+      why: "The 'unsafe-eval' directive allows eval() and similar functions that execute strings as code. This creates vulnerabilities where attackers can inject and execute arbitrary JavaScript, bypassing many security protections.",
       action: 'Avoid eval() and use alternative methods for dynamic code.',
       example: 'script-src: Remove unsafe-eval directive',
     });
@@ -247,6 +251,7 @@ function getRecommendations(analysis) {
     recommendations.push({
       priority: 1,
       title: 'Add script-src directive',
+      why: 'Without script-src, scripts can be loaded from any source, making your site vulnerable to malicious script injection from compromised third-party resources or XSS attacks. This is critical for preventing code execution attacks.',
       action: 'Explicitly define which scripts are allowed to execute.',
       example: "script-src 'self' https://trusted-cdn.com",
     });
@@ -256,6 +261,7 @@ function getRecommendations(analysis) {
     recommendations.push({
       priority: 2,
       title: 'Add object-src directive',
+      why: 'Without object-src restrictions, attackers can embed malicious Flash, Java applets, or other plugins that can bypass other security measures, access local files, or execute arbitrary code on user systems.',
       action: 'Disable plugins and object embedding.',
       example: "object-src 'none'",
     });
@@ -265,6 +271,7 @@ function getRecommendations(analysis) {
     recommendations.push({
       priority: 2,
       title: 'Replace Wildcards with Specific Sources',
+      why: 'Using wildcards (*) allows content from ANY domain, including attacker-controlled sites. This completely negates CSP protection and allows malicious content injection from anywhere on the internet.',
       action: 'Use specific domain or self instead of *.',
       example: "script-src 'self' https://trusted.com instead of script-src *",
     });
@@ -274,6 +281,7 @@ function getRecommendations(analysis) {
     recommendations.push({
       priority: 3,
       title: 'Regular Security Audits',
+      why: 'Your current security posture is weak. Regular audits help identify new vulnerabilities, ensure compliance with security standards, and catch configuration drift before attackers exploit weaknesses.',
       action: 'Perform quarterly CSP reviews and penetration testing.',
       example: 'Schedule security audits every 3 months',
     });
@@ -426,6 +434,10 @@ export default function ComplianceReport({ data }) {
                 <View style={styles.row}>
                   <Text style={styles.label}>Action:</Text>
                   <Text style={styles.value}>{rec.title}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Why:</Text>
+                  <Text style={styles.value}>{rec.why}</Text>
                 </View>
                 <View style={styles.row}>
                   <Text style={styles.label}>Details:</Text>

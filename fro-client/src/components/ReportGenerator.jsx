@@ -28,6 +28,7 @@ export function ReportGenerator({ data }) {
       recommendations.push({
         title: 'Missing CSP Header',
         severity: 'Critical',
+        why: 'Without CSP, your website is vulnerable to XSS attacks, code injection, and clickjacking. Attackers can inject malicious scripts that steal user data, hijack sessions, or deface your website.',
         action: 'Implement a Content-Security-Policy header',
       });
     } else {
@@ -35,6 +36,7 @@ export function ReportGenerator({ data }) {
         recommendations.push({
           title: 'Missing default-src directive',
           severity: 'High',
+          why: 'The default-src directive serves as a fallback for all other directives. Without it, unspecified resource types may load from any origin, creating security gaps.',
           action: "Add 'default-src' directive to CSP",
         });
       }
@@ -42,6 +44,7 @@ export function ReportGenerator({ data }) {
         recommendations.push({
           title: 'Missing script-src directive',
           severity: 'High',
+          why: 'Without script-src, scripts can be loaded from any source, making your site vulnerable to malicious script injection from compromised third-party resources or XSS attacks.',
           action: "Add 'script-src' directive to CSP",
         });
       }
@@ -49,6 +52,7 @@ export function ReportGenerator({ data }) {
         recommendations.push({
           title: "Unsafe 'unsafe-inline' directive",
           severity: 'High',
+          why: "Using 'unsafe-inline' defeats the primary purpose of CSP by allowing inline scripts and styles. This is the most common XSS attack vector, enabling attackers to inject malicious code directly into your pages.",
           action: 'Remove unsafe-inline and use nonces or hashes',
         });
       }
@@ -56,6 +60,7 @@ export function ReportGenerator({ data }) {
         recommendations.push({
           title: "Unsafe 'unsafe-eval' directive",
           severity: 'Medium',
+          why: "The 'unsafe-eval' directive allows eval() and similar functions that execute strings as code. This creates vulnerabilities where attackers can inject and execute arbitrary JavaScript.",
           action: 'Remove unsafe-eval from CSP',
         });
       }
@@ -63,7 +68,7 @@ export function ReportGenerator({ data }) {
 
     return recommendations.length > 0
       ? recommendations
-      : [{ title: 'No issues found', severity: 'Info', action: 'CSP looks secure' }];
+      : [{ title: 'No issues found', severity: 'Info', why: 'Your website has proper CSP configuration.', action: 'CSP looks secure' }];
   };
 
   const risk = getRiskLevel();
@@ -123,7 +128,8 @@ export function ReportGenerator({ data }) {
               }`}
             >
               <p className="font-semibold text-gray-900 dark:text-white">{rec.title}</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{rec.action}</p>
+              {rec.why && <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">{rec.why}</p>}
+              <p className="text-sm text-gray-700 dark:text-gray-300 mt-1"><strong>Action:</strong> {rec.action}</p>
             </div>
           ))}
         </div>
@@ -187,10 +193,12 @@ export function ReportGenerator({ data }) {
             </div>
             <div>
               <h5 className="font-semibold text-gray-900 dark:text-white">Findings</h5>
-              <ul className="text-gray-600 dark:text-gray-300 text-sm mt-2 space-y-1 list-disc list-inside">
+              <ul className="text-gray-600 dark:text-gray-300 text-sm mt-2 space-y-2 list-disc list-inside">
                 {recommendations.map((rec, i) => (
                   <li key={i}>
-                    <strong>{rec.title}:</strong> {rec.action}
+                    <strong>{rec.title}:</strong> {rec.why}
+                    <br />
+                    <span className="text-xs">Action: {rec.action}</span>
                   </li>
                 ))}
               </ul>
