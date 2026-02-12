@@ -7,10 +7,14 @@ import puppeteer from "puppeteer";
 const app = express();
 app.use(express.json());
 
-// ✅ Enable CORS for frontend (adjust origin as needed)
+// ✅ Enable CORS for frontend (supports multiple origins)
 const allowedOrigins = [
   "http://localhost:5173",
   process.env.FRONTEND_URL,
+  ...(process.env.FRONTEND_URLS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 ].filter(Boolean);
 
 app.use(cors({
