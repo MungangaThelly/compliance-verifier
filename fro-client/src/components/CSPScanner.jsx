@@ -1,6 +1,7 @@
 // src/components/CSPScanner.jsx
 import { useState, useRef, useEffect } from 'react';
 import { Search, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { SCAN_URL } from '../api';
 
 export default function CSPScanner({ onScanComplete, nonce, disabled, timeout = 30000 }) {
   const [url, setUrl] = useState('');
@@ -35,7 +36,7 @@ export default function CSPScanner({ onScanComplete, nonce, disabled, timeout = 
 
       setProgress('Analyzing website...');
 
-      const response = await fetch('http://localhost:3001/api/csp/scan', {
+      const response = await fetch(SCAN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

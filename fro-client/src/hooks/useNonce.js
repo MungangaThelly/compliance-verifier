@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { NONCE_URL } from '../api';
 
 export function useNonce() {
   const [nonce, setNonce] = useState('');
@@ -6,7 +7,7 @@ export function useNonce() {
   useEffect(() => {
     const generateNonce = async () => {
       try {
-        const response = await fetch('/api/csp/generate');
+        const response = await fetch(NONCE_URL);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

@@ -1,6 +1,7 @@
 // src/App.jsx
 import { useState, useEffect } from 'react';
 import { useNonce } from './hooks/useNonce';
+import { SCAN_URL } from './api';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import CSPScanner from './components/CSPScanner';
@@ -9,9 +10,26 @@ import Settings from './components/Settings';
 import ReportGenerator from './components/ReportGenerator';
 import './App.css';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 function App() {
+  const isEnvCheck = typeof window !== 'undefined' && window.location.pathname === '/env-check';
+  if (isEnvCheck) {
+    const envSnapshot = {
+      VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+      MODE: import.meta.env.MODE,
+      DEV: import.meta.env.DEV,
+      PROD: import.meta.env.PROD,
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50 text-gray-900 p-6">
+        <h1 className="text-2xl font-bold">Environment Variable Check</h1>
+        <p className="text-sm text-gray-600 mt-2">Rendered from the bundled app.</p>
+        <pre className="mt-4 bg-white border border-gray-200 rounded-lg p-4 text-sm overflow-auto">
+          {JSON.stringify(envSnapshot, null, 2)}
+        </pre>
+      </div>
+    );
+  }
   const [activePage, setActivePage] = useState('dashboard');
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('darkMode') === 'true';
@@ -44,7 +62,7 @@ function App() {
 
   const sendToITWeorABAPI = async (data) => {
     try {
-      const response = await fetch('http://localhost:3001/api/csp/scan', {
+      const response = await fetch(SCAN_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
