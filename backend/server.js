@@ -10,6 +10,7 @@ app.use(express.json());
 // ✅ Enable CORS for frontend (supports multiple origins)
 const allowedOrigins = [
   "http://localhost:5173",
+  "https://compliance-verifier-cix9.vercel.app",
   process.env.FRONTEND_URL,
   ...(process.env.FRONTEND_URLS || "")
     .split(",")
