@@ -2,15 +2,16 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import crypto from "crypto";
-import puppeteer from "puppeteer";
+import axios from "axios"; // Replace puppeteer with axios
 
 const app = express();
 app.use(express.json());
 
-// ✅ Enable CORS for frontend (supports multiple origins)
+// ✅ Enable CORS for frontend
 const allowedOrigins = [
   "http://localhost:5173",
   "https://compliance-verifier-cix9.vercel.app",
+  "https://compliance-verifier-lezhxxbau-mungangathellys-projects.vercel.app",
   process.env.FRONTEND_URL,
   ...(process.env.FRONTEND_URLS || "")
     .split(",")
@@ -20,9 +21,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
-    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -38,10 +37,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Helmet with CSP disabled for development (backend only affects API responses)
+// ✅ Helmet with CSP disabled
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
+
+// ✅ Health check endpoint (Vercel needs this)
+app.get("/api", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "CSP Compliance API is running",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // ✅ Friendly root route
 app.get("/", (req, res) => {
@@ -64,7 +72,7 @@ app.get('/api/csp/generate', (req, res) => {
   }
 });
 
-// ✅ CSP scan route with optimized Puppeteer usage
+// ✅ Updated CSP scan route - using axios instead of puppeteer
 app.post('/api/csp/scan', async (req, res) => {
   const { url } = req.body;
 
@@ -75,66 +83,90 @@ app.post('/api/csp/scan', async (req, res) => {
   }
 
   try {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox'
-      ]
-    });
-
-    const page = await browser.newPage();
-
-    // Capture CSP header
-    let cspHeader = 'Ingen CSP hittades';
-    page.on('response', (response) => {
-      const contentSecurityPolicy = response.headers()['content-security-policy'];
-      if (contentSecurityPolicy) {
-        cspHeader = contentSecurityPolicy;
+    // Make request to get headers
+    const response = await axios.get(url, {
+      timeout: 10000,
+      maxRedirects: 5,
+      validateStatus: false, // Don't throw on any status code
+      headers: {
+        'User-Agent': 'Compliance-Verifier-Bot/1.0'
       }
     });
 
-    try {
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    // Extract CSP header
+    const cspHeader = response.headers['content-security-policy'] || 
+                     response.headers['content-security-policy-report-only'] || 
+                     'No CSP header found';
 
-      // Calculate risk score
-      let riskScore = 100;
+    // Calculate risk score
+    let riskScore = 100;
 
-      if (!cspHeader || cspHeader === 'Ingen CSP hittades') {
-        riskScore -= 50;
-      } else {
-        const headerLower = cspHeader.toLowerCase();
+    if (!cspHeader || cspHeader === 'No CSP header found') {
+      riskScore -= 50;
+    } else {
+      const headerLower = cspHeader.toLowerCase();
 
-        if (headerLower.includes('unsafe-inline')) riskScore -= 30;
-        if (headerLower.includes('unsafe-eval')) riskScore -= 20;
-        if (headerLower.includes('*')) riskScore -= 25;
-        if (!headerLower.includes('default-src')) riskScore -= 15;
-        if (!headerLower.includes('script-src')) riskScore -= 20;
-        if (!headerLower.includes('object-src')) riskScore -= 10;
-      }
-
-      riskScore = Math.max(0, Math.min(100, riskScore));
-
-      res.json({
-        url,
-        cspHeader,
-        riskScore,
-        timestamp: new Date().toISOString(),
-      });
-    } finally {
-      await browser.close();
+      if (headerLower.includes('unsafe-inline')) riskScore -= 30;
+      if (headerLower.includes('unsafe-eval')) riskScore -= 20;
+      if (headerLower.includes('*')) riskScore -= 25;
+      if (!headerLower.includes('default-src')) riskScore -= 15;
+      if (!headerLower.includes('script-src')) riskScore -= 20;
+      if (!headerLower.includes('object-src')) riskScore -= 10;
     }
+
+    riskScore = Math.max(0, Math.min(100, riskScore));
+
+    res.json({
+      url,
+      cspHeader,
+      riskScore,
+      statusCode: response.status,
+      timestamp: new Date().toISOString(),
+    });
+
   } catch (error) {
     console.error('Scan error:', error);
-    res.status(500).json({
-      error: 'Failed to scan website',
-      details: error.message,
-    });
+    
+    // Handle different types of errors
+    if (error.code === 'ECONNABORTED') {
+      return res.status(408).json({
+        error: 'Request timeout',
+        details: 'The website took too long to respond'
+      });
+    }
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      return res.status(500).json({
+        error: 'Failed to scan website',
+        details: `Server responded with status ${error.response.status}`,
+        url: url
+      });
+    } else if (error.request) {
+      // The request was made but no response received
+      return res.status(500).json({
+        error: 'Failed to scan website',
+        details: 'No response received from the server',
+        url: url
+      });
+    } else {
+      // Something happened in setting up the request
+      return res.status(500).json({
+        error: 'Failed to scan website',
+        details: error.message,
+        url: url
+      });
+    }
   }
 });
 
-// ✅ Start server
-const port = process.env.PORT || 3001;
-app.listen(port, () => {
-  console.log(`✅ API running on port ${port}`);
-});
+// ✅ Export for Vercel (IMPORTANT!)
+export default app;
+
+// ✅ Only listen locally, not on Vercel
+if (process.env.NODE_ENV !== 'production') {
+  const port = process.env.PORT || 3001;
+  app.listen(port, () => {
+    console.log(`✅ API running locally on port ${port}`);
+  });
+}
