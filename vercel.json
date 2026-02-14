@@ -6,7 +6,20 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/fro-client/index.html"
+      "destination": "/fro-client/dist/index.html"
+    }
+  ],
+  "builds": [
+    {
+      "src": "backend/server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "fro-client/**",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "fro-client/dist"
+      }
     }
   ],
   "functions": {
