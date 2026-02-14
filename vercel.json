@@ -9,10 +9,10 @@
       }
     },
     {
-      "src": "fro-client/**",
+      "src": "fro-client/package.json",  
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "fro-client/dist"
+        "distDir": "dist"  
       }
     }
   ],
@@ -23,7 +23,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/fro-client/dist/index.html"
+      "destination": "/fro-client/dist/index.html" 
     }
   ],
   "headers": [
